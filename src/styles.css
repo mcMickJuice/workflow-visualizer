@@ -1,0 +1,20 @@
+.stepContainer {
+}
+
+.stepContainer > * {
+  margin-bottom: 24px;
+}
+
+.line {
+  border: 1px solid blue;
+  position: absolute;
+}
+
+.step {
+  height: 125px;
+  width: 125px;
+  border: 1px solid black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
