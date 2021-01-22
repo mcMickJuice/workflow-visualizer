@@ -2,8 +2,12 @@
   position: relative;
 }
 
-.stepContainer > * {
+.stepContainer.vertical > * {
   margin-bottom: 24px;
+}
+
+.stepContainer.horizontal > * {
+  margin-right: 24px;
 }
 
 .line {
