@@ -1,13 +1,21 @@
+* {
+  box-sizing: border-box;
+}
+
 .stepContainer {
   position: relative;
 }
 
-.stepContainer.vertical > * {
+.stepContainer.horizontal {
+  display: flex;
+}
+
+.stepContainer.vertical > .step {
   margin-bottom: 24px;
 }
 
-.stepContainer.horizontal > * {
-  margin-right: 24px;
+.stepContainer.horizontal > .step {
+  margin-right: 100px;
 }
 
 .line {

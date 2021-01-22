@@ -1,184 +1,90 @@
-import React, { CSSProperties } from 'react'
-import './styles.css'
-
-interface StepContextType {
-  getLineStyles: (id: string) => CSSProperties | undefined
-}
-
-const StepContext = React.createContext<StepContextType | undefined>(undefined)
-
-function useStepContext() {
-  const value = React.useContext(StepContext)
-
-  if (value == null) throw new Error('StepContext accessed outside provider')
-
-  return value
-}
-
-interface StepCoordinate {
-  x: number
-  y: number
-  top: number
-  left: number
-  right: number
-  bottom: number
-  width: number
-}
-
-const StepProvider = ({
-  workflows,
-  children
-}: {
-  workflows: Workflow[]
-  children: React.ReactNode
-}) => {
-  const [coordinates, setCoordinates] = React.useState<
-    { id: string; coordinate: StepCoordinate }[]
-  >([])
-
-  React.useLayoutEffect(() => {
-    console.log('layout effect called')
-    const mappedCoordinates = workflows.map((w) => {
-      const selector = `[data-step-id=${w.id}]`
-      const elem = document.querySelector(selector)?.getBoundingClientRect()
-      if (elem == null)
-        throw new Error(`Could not find element for selector - ${selector}`)
-
-      const { x, y, top, left, right, bottom, width } = elem
-      return {
-        id: w.id,
-        coordinate: {
-          x,
-          y,
-          top,
-          left,
-          right,
-          bottom,
-          width
-        }
-      }
-    })
-
-    setCoordinates(mappedCoordinates)
-  }, [])
-
-  const getLineStyles = React.useCallback(
-    (id: string) => {
-      const fromCoordinates = coordinates.find((c) => c.id === id)
-      const toStep = workflows.find((w) => w.id === id)
-
-      if (toStep == null || toStep.nextId == null)
-        throw new Error('toStep not found or step doesnt have nextId')
-
-      const toCoordinates = coordinates.find((c) => c.id === toStep.nextId)
-
-      if (fromCoordinates == null || toCoordinates == null) return undefined
-
-      const style: CSSProperties = {
-        width: '8px',
-        height:
-          toCoordinates.coordinate.top - fromCoordinates.coordinate.bottom,
-        left: fromCoordinates.coordinate.width / 2,
-        top: fromCoordinates.coordinate.bottom - 12 + 'px',
-        bottom: toCoordinates.coordinate.top - 12 + 'px'
-      }
-
-      return style
-    },
-    [coordinates]
-  )
-
-  return (
-    <StepContext.Provider
-      value={{
-        getLineStyles
-      }}
-    >
-      {children}
-    </StepContext.Provider>
-  )
-}
-
-interface Workflow {
-  id: string
-  nextId?: string
-  name: string
-  order: number
-}
+import React from "react";
+import StepProvider, { useStepContext } from "./StepProvider";
+import "./styles.css";
+import { Orientation, Workflow } from "./types";
 
 const workflows: Workflow[] = [
   {
-    id: 'first',
-    nextId: 'second',
-    name: 'First',
-    order: 0
+    id: "first",
+    nextId: "second",
+    name: "First",
+    order: 0,
   },
   {
-    id: 'second',
-    name: 'Second',
-    nextId: 'third',
-    order: 1
+    id: "second",
+    name: "Second",
+    nextId: "third",
+    order: 1,
   },
   {
-    id: 'third',
-    name: 'Third',
-    nextId: 'fourth',
-    order: 2
+    id: "third",
+    name: "Third",
+    nextId: "fourth",
+    order: 2,
   },
   {
-    id: 'fourth',
-    name: 'Fourth',
-    order: 3
-  }
-]
+    id: "fourth",
+    name: "Fourth",
+    order: 3,
+  },
+];
 
-const Step = ({ children, id }: { children: React.ReactNode; id: string }) => {
-  return (
-    <div data-step-id={id} className="step">
-      {children}
-    </div>
-  )
-}
+const Step = ({ children }: { children: React.ReactNode }) => {
+  return <div className="step">{children}</div>;
+};
 
-const Line = ({ fromId, toId }: { fromId: string; toId: string }) => {
-  const { getLineStyles } = useStepContext()
+const Line = ({ fromId }: { fromId: string }) => {
+  const { getLineStyles } = useStepContext();
 
-  const styles = getLineStyles(fromId)
+  const styles = getLineStyles(fromId);
 
-  if (styles == null) return null
+  if (styles == null) return null;
 
-  return <div style={styles} className="line" />
-}
+  return <div style={styles} className="line" />;
+};
 
 // layout children elements
 const StepContainer = ({
   workflows,
-  orientation
+  orientation,
 }: {
-  workflows: Workflow[]
-  orientation: Orientation
+  workflows: Workflow[];
+  orientation: Orientation;
 }) => {
   return (
-    <div className={`stepContainer ${orientation}`}>
+    <div data-root-id="root" className={`stepContainer ${orientation}`}>
       {workflows.map((w) => (
         <React.Fragment key={w.id}>
-          <Step id={w.id}>{w.name}</Step>
-          {w.nextId && <Line fromId={w.id} toId={w.nextId} />}
+          <Step>
+            <div data-step-id={w.id} style={{ height: "100%", width: "100%" }}>
+              {w.name}
+            </div>
+          </Step>
+          {w.nextId && <Line fromId={w.id} />}
         </React.Fragment>
       ))}
     </div>
-  )
-}
-
-type Orientation = 'vertical' | 'horizontal'
+  );
+};
 
 export default function App() {
-  const orientation: Orientation = 'vertical'
+  const [orientation, setOrientation] = React.useState<Orientation>(
+    "horizontal"
+  );
   return (
     <div className="App">
-      <StepProvider workflows={workflows}>
+      <button
+        onClick={() =>
+          setOrientation(
+            orientation === "horizontal" ? "vertical" : "horizontal"
+          )
+        }
+      >
+        Click To Orientation
+      </button>
+      <StepProvider orientation={orientation} workflows={workflows}>
         <StepContainer orientation={orientation} workflows={workflows} />
       </StepProvider>
     </div>
-  )
+  );
 }
