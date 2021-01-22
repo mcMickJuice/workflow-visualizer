@@ -1,18 +1,28 @@
-import React from 'react'
+import React, { CSSProperties } from 'react'
 import './styles.css'
 
 interface StepContextType {
-  getLineCoordinates: (id: string) => number
+  getLineCoordinates: (id: string) => StepCoordinate | undefined
 }
 
-const StepContext = React.createContext<StepContextType>({
-  getLineCoordinates: () => 0
-})
+const StepContext = React.createContext<StepContextType | undefined>(undefined)
 
 function useStepContext() {
   const value = React.useContext(StepContext)
 
+  if (value == null) throw new Error('StepContext accessed outside provider')
+
   return value
+}
+
+interface StepCoordinate {
+  x: number
+  y: number
+  top: number
+  left: number
+  right: number
+  bottom: number
+  width: number
 }
 
 const StepProvider = ({
@@ -22,17 +32,46 @@ const StepProvider = ({
   workflows: Workflow[]
   children: React.ReactNode
 }) => {
+  const [coordinates, setCoordinates] = React.useState<
+    { id: string; coordinate: StepCoordinate }[]
+  >([])
+
   React.useLayoutEffect(() => {
     console.log('layout effect called')
-    const coordinates = workflows.map(w => {
-      document.
-    })
-  })
+    const mappedCoordinates = workflows.map((w) => {
+      const selector = `[data-step-id=${w.id}]`
+      const elem = document.querySelector(selector)?.getBoundingClientRect()
+      if (elem == null)
+        throw new Error(`Could not find element for selector - ${selector}`)
 
-  function getLineCoordinates(id: string) {
-    console.log('line coordinates fetched for', id)
-    return 0
-  }
+      const { x, y, top, left, right, bottom, width } = elem
+      return {
+        id: w.id,
+        coordinate: {
+          x,
+          y,
+          top,
+          left,
+          right,
+          bottom,
+          width
+        }
+      }
+    })
+
+    setCoordinates(mappedCoordinates)
+  }, [])
+
+  const getLineCoordinates = React.useCallback(
+    (id: string) => {
+      const coordinate = coordinates.find((c) => c.id === id)
+
+      if (coordinate == null) return undefined
+
+      return coordinate.coordinate
+    },
+    [coordinates]
+  )
 
   return (
     <StepContext.Provider
@@ -61,14 +100,20 @@ const workflows: Workflow[] = [
   },
   {
     id: 'second',
-    nextId: 'third',
     name: 'Second',
+    nextId: 'third',
     order: 1
   },
   {
     id: 'third',
     name: 'Third',
+    nextId: 'fourth',
     order: 2
+  },
+  {
+    id: 'fourth',
+    name: 'Fourth',
+    order: 3
   }
 ]
 
@@ -83,9 +128,22 @@ const Step = ({ children, id }: { children: React.ReactNode; id: string }) => {
 const Line = ({ fromId, toId }: { fromId: string; toId: string }) => {
   const { getLineCoordinates } = useStepContext()
 
-  getLineCoordinates(fromId)
+  const fromCoordinates = getLineCoordinates(fromId)
+  const toCoordinates = getLineCoordinates(toId)
 
-  return <div className="line" />
+  if (fromCoordinates == null || toCoordinates == null) return null
+  console.log('fromCoordinates', fromCoordinates)
+  console.log('toCoordinates', toCoordinates)
+
+  const style: CSSProperties = {
+    width: '8px',
+    height: toCoordinates.top - fromCoordinates.bottom,
+    left: fromCoordinates.width / 2,
+    top: fromCoordinates.bottom - 12 + 'px',
+    bottom: toCoordinates.top - 12 + 'px'
+  }
+
+  return <div style={style} className="line" />
 }
 
 // layout children elements
